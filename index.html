@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>작업 보고</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="theme-color" content="#1f5f52">
+<style>
+body{margin:0;font:16px/1.5 system-ui,sans-serif;background:#f4f5f4;color:#222}
+header{position:sticky;top:0;background:#1f5f52;color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
+button{font:inherit;padding:6px 12px;border:0;border-radius:6px;background:#fff;color:#1f5f52}
+#setup{padding:12px 16px;background:#fff;border-bottom:1px solid #ddd}
+#setup textarea{width:100%;height:90px;font-size:12px}
+.m{background:#fff;margin:10px 12px;padding:10px 12px;border-radius:8px;border:1px solid #e2e2e2}
+.m b{display:block}.m small{color:#888}.m p{margin:6px 0 0;white-space:pre-wrap;word-break:break-word}
+@media(prefers-color-scheme:dark){body{background:#111;color:#ddd}.m,#setup{background:#1c1c1c;border-color:#333}}
+</style>
+</head>
+<body>
+<header><span>작업 보고</span><button id="on">알림 등록</button></header>
+<div id="setup" hidden>아래 글을 모두 복사해서 클로드에게 보내 주세요.<textarea id="sub" readonly></textarea><button id="cp">복사</button></div>
+<div id="list"></div>
+<script>
+const KEY='BIEvIo-Xiwrj7LikXHJZyp19rmg9RFJGutQPAVSx5PsckJY_S6Sb92cAgEHFDAbLRklD5o3isMvMNeWH6I7rKxY';
+const reg=navigator.serviceWorker.register('sw.js');
+function db(){return new Promise((ok,no)=>{const r=indexedDB.open('m',1);r.onupgradeneeded=()=>r.result.createObjectStore('m',{autoIncrement:true});r.onsuccess=()=>ok(r.result);r.onerror=no})}
+async function show(){
+  const d=await db(),all=await new Promise(ok=>{const q=d.transaction('m').objectStore('m').getAll();q.onsuccess=()=>ok(q.result)});
+  list.replaceChildren(...all.reverse().map(m=>{const e=document.createElement('div');e.className='m';
+    e.append(Object.assign(document.createElement('b'),{textContent:m.t}),Object.assign(document.createElement('small'),{textContent:new Date(m.ts*1000).toLocaleString('ko-KR')}),Object.assign(document.createElement('p'),{textContent:m.b}));return e}));
+}
+on.onclick=async()=>{
+  if(await Notification.requestPermission()!=='granted')return alert('알림을 허용해야 받을 수 있어요.');
+  const s=await (await reg).pushManager.subscribe({userVisibleOnly:true,applicationServerKey:KEY});
+  sub.value=JSON.stringify(s);setup.hidden=false;
+};
+cp.onclick=()=>navigator.clipboard.writeText(sub.value).then(()=>cp.textContent='복사됨');
+navigator.serviceWorker.onmessage=show;document.onvisibilitychange=show;show();
+</script>
+</body>
+</html>
